@@ -18,12 +18,6 @@ mapTask f t =
     Task { task | children = List.map (mapTask f) task.children }
 
 
-isJust : Maybe a -> Bool
-isJust x =
-  case x of
-    Nothing -> False
-    _       -> True
-
 filterTask : (Task -> Bool) -> Task -> Maybe Task 
 filterTask f (Task t) =
   if f (Task t) then
@@ -47,6 +41,7 @@ addTaskByPosAndLvl pos lvl (Task task) =
 
 addTask : Int -> Int -> Task -> Task
 addTask pos lvl t = mapTask (addTaskByPosAndLvl pos lvl) t
+
 
 removeTask : Int -> Int -> Task -> Maybe Task
 removeTask pos lvl task = filterTask

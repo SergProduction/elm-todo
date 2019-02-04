@@ -13,46 +13,38 @@ main = Browser.sandbox
   , view = view }
 
 
-type alias Model =
-  { taskTree: Task
-  , taskEditable: Maybe Task
-  }
+type alias Model = Task
 
 
 init : Model
 init =
-  { taskTree = Task
+  Task
     { name = "begin"
     , pos = 0
     , lvl = 0
     , children = []
     }
-  , taskEditable = Nothing
-  }
 
 
 type Msg
   = Add Int Int
   | Del Int Int
-  | Edit Task
 
 
 update : Msg -> Model -> Model
 update msg model =
   case msg of
-    Add pos lvl -> { model | taskTree = addTask pos lvl model.taskTree }
-    Del pos lvl -> case removeTask pos lvl model.taskTree of
-      Nothing -> { model | taskTree = Task { name = "main task", pos = 0, lvl = 0, children = [] } }
-      Just t -> { model | taskTree = t }
-    Edit t -> {model | taskEditable = Just t }
+    Add pos lvl -> addTask pos lvl model
+    Del pos lvl -> case removeTask pos lvl model of
+      Nothing -> Task { name = "main task", pos = 0, lvl = 0, children = [] }
+      Just t -> t
 
 
 view : Model -> Html Msg
 view model =
   div [ class "main" ]
     [ node "link" [ rel "stylesheet", href "main.css" ] []
-    , div [class "task-tree"] [recRenderTask model.taskTree]
-    , div [] [renderTaskEditable model.taskEditable]
+    , div [class "task-tree"] [recRenderTask model]
     ]
 
 
@@ -66,13 +58,7 @@ recRenderTask (Task task) =
         [ span [] [text (String.fromInt task.lvl ++ ".")]
         , span [] [text (String.fromInt task.pos)]
         ]
-      , div [ onClick <| Edit (Task task) ] [text task.name]
+      , div [] [text task.name]
       ]
     , li [] (List.map recRenderTask task.children)
     ]
-
-
-renderTaskEditable : Maybe Task -> Html Msg
-renderTaskEditable t = case t of
-  Nothing -> text ""
-  _ -> span [] [text "TaskEditable"]
