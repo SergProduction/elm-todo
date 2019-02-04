@@ -1,5 +1,5 @@
 module TaskStruct exposing (Task(..), mapTask, filterTask, addTask, removeTask)
-
+import Maybe.Extra exposing (values)
 
 type Task =
     Task
@@ -25,9 +25,9 @@ isJust x =
     _       -> True
 
 filterTask : (Task -> Bool) -> Task -> Maybe Task 
-filterTask f (Task task) =
-  if f (Task task) then
-    Just ( Task { task | children = List.filter (\x -> isJust ( filterTask f x ) ) task.children } )
+filterTask f (Task t) =
+  if f (Task t) then
+    Just ( Task { t | children = t.children |> List.map (filterTask f) |> values } )
   else
     Nothing
 
