@@ -1,8 +1,9 @@
 module TaskStruct exposing (
   Task(..)
+  , createTask
   , mapTask, filterTask
   , addTask, removeTask
-  , createTask, findAndUpdateTaskName
+  , findAndUpdateTaskName, findAndUpdateTaskDesk
   )
 import Maybe.Extra exposing (values)
 
@@ -11,12 +12,22 @@ type Status
   | Complete
   | Error
 
+{-
+type alias Branch =
+  { name : String
+  , text : String
+  , children : List Task
+  }
+-}
+
 type Task =
     Task
     { name : String
     , status: Status
+    , desk: String
     , pos : Int
     , lvl : Int
+    -- , branches : Dict String, Branch
     , children : List Task
     }
 
@@ -44,7 +55,7 @@ addTaskByPosAndLvl pos lvl (Task task) =
       Task { task |
              children = List.append
                task.children
-               [ Task { name = "new task", pos = (List.length task.children), lvl = lvl + 1, children = [] } ]
+               [ createTaskPosLvlName (List.length task.children) (lvl + 1) "new task" ]
       }
     else
       Task task
@@ -58,14 +69,35 @@ removeTask pos lvl task = filterTask
   ( \(Task t) -> not (t.pos == pos && t.lvl == lvl) )
   task
 
+createTaskPosLvlName : Int -> Int -> String -> Task
+createTaskPosLvlName pos lvl name = Task
+  { name = name
+  , status = Planned
+  , desk = ""
+  , pos = pos
+  , lvl = lvl
+  -- , branches = empty
+  , children = []
+  }
+
 createTask : String -> Task
-createTask name = Task { name = name, pos = 0, lvl = 0, children = [] }
+createTask = createTaskPosLvlName 0 0
+
 
 findAndUpdateTaskName : Task -> Task -> String -> Task
 findAndUpdateTaskName treeTask (Task oneTask) taskName =
   mapTask (\(Task t) -> if t.lvl == oneTask.lvl && t.pos == oneTask.pos
       then
         Task { t | name = taskName }
+      else
+        (Task t)
+  ) treeTask
+
+findAndUpdateTaskDesk : Task -> Task -> String -> Task
+findAndUpdateTaskDesk treeTask (Task oneTask) desk =
+  mapTask (\(Task t) -> if t.lvl == oneTask.lvl && t.pos == oneTask.pos
+      then
+        Task { t | desk = desk }
       else
         (Task t)
   ) treeTask

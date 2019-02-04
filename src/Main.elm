@@ -1,13 +1,15 @@
 import Browser
-import Html exposing (Html, node, text, div, button, ul, li, span, input)
+import Html exposing (Html, node, text, div, button, ul, li, span, input, textarea)
 import Html.Events exposing (onClick, onInput)
-import Html.Attributes exposing (rel, href, class, type_, value)
+import Html.Attributes exposing (rel, href, class, type_, value, placeholder)
 import Debug
 import TaskStruct as T exposing (
   Task(..)
+  , createTask
   , mapTask, filterTask
   , addTask, removeTask
-  , createTask, findAndUpdateTaskName)
+  , findAndUpdateTaskName, findAndUpdateTaskDesk
+  )
 
 
 
@@ -36,6 +38,8 @@ type TreeTask
 type EditTask
   = Edit Task
   | Name String
+  | Desk String
+
 
 type Msg
   = TreeTask TreeTask
@@ -56,6 +60,13 @@ update msg model =
         | taskEditable = Just <| Task { t | name = taskName }
         , taskTree = findAndUpdateTaskName model.taskTree (Task t) taskName
         }
+    EditTask (Desk desk) -> case model.taskEditable of
+      Nothing       -> { model | taskEditable = Just <| createTask "" } -- такого не может быть. но почему-то мне нужно обработать этот случай
+      Just (Task t) ->
+        { model
+        | taskEditable = Just <| Task { t | desk = desk }
+        , taskTree = findAndUpdateTaskDesk model.taskTree (Task t) desk
+        }
 
 
 
@@ -63,13 +74,13 @@ view : Model -> Html Msg
 view model =
   div [ class "main" ]
     [ node "link" [ rel "stylesheet", href "main.css" ] []
-    , div [class "task-tree"] [recRenderTask model.taskTree]
-    , div [] [renderTaskEditable model.taskEditable]
+    , div [class "task-tree"] [recViewTaskTree model.taskTree]
+    , div [] [viewTaskEditable model.taskEditable]
     ]
 
 
-recRenderTask : Task -> Html Msg
-recRenderTask (Task task) =
+recViewTaskTree : Task -> Html Msg
+recViewTaskTree (Task task) =
   ul []
     [ li [class "name" ]
       [ div [class "del", onClick (TreeTask <| Del task.pos task.lvl)] [text "del"]
@@ -80,11 +91,14 @@ recRenderTask (Task task) =
         ]
       , div [ onClick <| EditTask <| Edit (Task task) ] [text task.name]
       ]
-    , li [] (List.map recRenderTask task.children)
+    , li [] (List.map recViewTaskTree task.children)
     ]
 
 
-renderTaskEditable : Maybe Task -> Html Msg
-renderTaskEditable t = case t of
+viewTaskEditable : Maybe Task -> Html Msg
+viewTaskEditable t = case t of
   Nothing -> text ""
-  Just (Task task) -> input [ type_ "text", value task.name, onInput (\n -> EditTask (Name n)) ] []
+  Just (Task task) -> div [class "editable"]
+    [ input [type_ "text", value task.name, onInput (\n -> EditTask (Name n))] []
+    , textarea [onInput (\n -> EditTask (Desk n)), value task.desk] [text task.desk]
+    ]

@@ -28,3 +28,16 @@
 .name .id {
   color: #ff9200
 }
+
+.editable {
+  display: flex;
+  flex-direction: column;
+}
+
+.editable > * + * {
+  margin-top: 15px;
+}
+
+.editable textarea {
+  max-width: 500px;
+}
