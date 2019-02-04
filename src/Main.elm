@@ -1,9 +1,13 @@
 import Browser
-import Html exposing (Html, node, text, div, button, ul, li, span)
-import Html.Events exposing (onClick)
-import Html.Attributes exposing (rel, href, class)
+import Html exposing (Html, node, text, div, button, ul, li, span, input)
+import Html.Events exposing (onClick, onInput)
+import Html.Attributes exposing (rel, href, class, type_, value)
 import Debug
-import TaskStruct as T exposing (Task(..), mapTask, filterTask, addTask, removeTask)
+import TaskStruct as T exposing (
+  Task(..)
+  , mapTask, filterTask
+  , addTask, removeTask
+  , createTask, findAndUpdateTaskName)
 
 
 
@@ -13,38 +17,54 @@ main = Browser.sandbox
   , view = view }
 
 
-type alias Model = Task
+type alias Model =
+  { taskTree: Task
+  , taskEditable: Maybe Task
+  }
 
 
 init : Model
 init =
-  Task
-    { name = "begin"
-    , pos = 0
-    , lvl = 0
-    , children = []
-    }
+  { taskTree = createTask "begin"
+  , taskEditable = Nothing
+  }
 
-
-type Msg
+type TreeTask
   = Add Int Int
   | Del Int Int
 
+type EditTask
+  = Edit Task
+  | Name String
+
+type Msg
+  = TreeTask TreeTask
+  | EditTask EditTask
 
 update : Msg -> Model -> Model
 update msg model =
   case msg of
-    Add pos lvl -> addTask pos lvl model
-    Del pos lvl -> case removeTask pos lvl model of
-      Nothing -> Task { name = "main task", pos = 0, lvl = 0, children = [] }
-      Just t -> t
+    TreeTask (Add pos lvl) -> { model | taskTree = addTask pos lvl model.taskTree }
+    TreeTask (Del pos lvl) -> case removeTask pos lvl model.taskTree of
+      Nothing -> { model | taskTree =  createTask "main task" }
+      Just t  -> { model | taskTree = t }
+    EditTask (Edit t) -> {model | taskEditable = Just t }
+    EditTask (Name taskName) -> case model.taskEditable of
+      Nothing       -> { model | taskEditable = Just <| createTask taskName } -- такого не может быть. но почему-то мне нужно обработать этот случай
+      Just (Task t) ->
+        { model
+        | taskEditable = Just <| Task { t | name = taskName }
+        , taskTree = findAndUpdateTaskName model.taskTree (Task t) taskName
+        }
+
 
 
 view : Model -> Html Msg
 view model =
   div [ class "main" ]
     [ node "link" [ rel "stylesheet", href "main.css" ] []
-    , div [class "task-tree"] [recRenderTask model]
+    , div [class "task-tree"] [recRenderTask model.taskTree]
+    , div [] [renderTaskEditable model.taskEditable]
     ]
 
 
@@ -52,13 +72,19 @@ recRenderTask : Task -> Html Msg
 recRenderTask (Task task) =
   ul []
     [ li [class "name" ]
-      [ div [class "del", onClick (Del task.pos task.lvl)] [text "del"]
-      , div [class "add", onClick (Add task.pos task.lvl)] [text "add"]
+      [ div [class "del", onClick (TreeTask <| Del task.pos task.lvl)] [text "del"]
+      , div [class "add", onClick (TreeTask <| Add task.pos task.lvl)] [text "add"]
       , div [class "id"]
         [ span [] [text (String.fromInt task.lvl ++ ".")]
         , span [] [text (String.fromInt task.pos)]
         ]
-      , div [] [text task.name]
+      , div [ onClick <| EditTask <| Edit (Task task) ] [text task.name]
       ]
     , li [] (List.map recRenderTask task.children)
     ]
+
+
+renderTaskEditable : Maybe Task -> Html Msg
+renderTaskEditable t = case t of
+  Nothing -> text ""
+  Just (Task task) -> input [ type_ "text", value task.name, onInput (\n -> EditTask (Name n)) ] []

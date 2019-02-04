@@ -1,9 +1,20 @@
-module TaskStruct exposing (Task(..), mapTask, filterTask, addTask, removeTask)
+module TaskStruct exposing (
+  Task(..)
+  , mapTask, filterTask
+  , addTask, removeTask
+  , createTask, findAndUpdateTaskName
+  )
 import Maybe.Extra exposing (values)
+
+type Status
+  = Planned
+  | Complete
+  | Error
 
 type Task =
     Task
     { name : String
+    , status: Status
     , pos : Int
     , lvl : Int
     , children : List Task
@@ -42,8 +53,19 @@ addTaskByPosAndLvl pos lvl (Task task) =
 addTask : Int -> Int -> Task -> Task
 addTask pos lvl t = mapTask (addTaskByPosAndLvl pos lvl) t
 
-
 removeTask : Int -> Int -> Task -> Maybe Task
 removeTask pos lvl task = filterTask
   ( \(Task t) -> not (t.pos == pos && t.lvl == lvl) )
   task
+
+createTask : String -> Task
+createTask name = Task { name = name, pos = 0, lvl = 0, children = [] }
+
+findAndUpdateTaskName : Task -> Task -> String -> Task
+findAndUpdateTaskName treeTask (Task oneTask) taskName =
+  mapTask (\(Task t) -> if t.lvl == oneTask.lvl && t.pos == oneTask.pos
+      then
+        Task { t | name = taskName }
+      else
+        (Task t)
+  ) treeTask
