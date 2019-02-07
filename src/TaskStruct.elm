@@ -2,6 +2,8 @@ module TaskStruct exposing
     ( Task(..)
     , addTask
     , createTask
+    , decode
+    , encode
     , filterTask
     , findAndUpdateTaskDesk
     , findAndUpdateTaskName
@@ -30,28 +32,31 @@ type Task
         , desk : String
         , pos : Int
         , lvl : Int
-
-        -- , branches : Dict String, Branch
         , children : List Task
         }
 
 
+decode : D.Decoder Task
+decode =
+    D.map6 (\n s d p l c -> Task { name = n, status = s, desk = d, pos = p, lvl = l, children = c })
+        (D.field "name" D.string)
+        (D.field "status" D.string)
+        (D.field "desk" D.string)
+        (D.field "pos" D.int)
+        (D.field "lvl" D.int)
+        (D.field "children" (D.list (D.lazy (\_ -> decode))))
 
-{-
-   decoder : D.Decoder Task
-   decoder =
-       let d = D.map6 Tsk
-           (D.field "name" D.string)
-           (D.field "status" D.string)
-           (D.field "desk" D.string)
-           (D.field "pos" D.int)
-           (D.field "lvl" D.int)
-           (D.field "children" D.list (D.lazy (\_ -> decoder)))
-       in
-         case d of
-           Ok dd -> Task dd
-           Err _ -> Err _
--}
+
+encode : Task -> E.Value
+encode (Task t) =
+    E.object
+        [ ( "name", E.string t.name )
+        , ( "status", E.string t.status )
+        , ( "desk", E.string t.desk )
+        , ( "pos", E.int t.pos )
+        , ( "lvl", E.int t.lvl )
+        , ( "children", E.list encode t.children )
+        ]
 
 
 mapTask : (Task -> Task) -> Task -> Task

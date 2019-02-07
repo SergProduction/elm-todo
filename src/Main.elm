@@ -1,10 +1,12 @@
-module Main exposing (EditTask(..), Model, Msg(..), TreeTask(..), init, main, recViewTaskTree, subscriptions, update, view, viewTaskEditable)
+port module Main exposing (EditTask(..), Model, Msg(..), TreeTask(..), init, main, recViewTaskTree, subscriptions, update, view, viewTaskEditable)
 
 import Browser
 import Debug
 import Html exposing (Html, button, div, input, li, node, span, text, textarea, ul)
 import Html.Attributes exposing (class, href, placeholder, rel, type_, value)
 import Html.Events exposing (onClick, onInput)
+import Json.Decode as D
+import Json.Encode as E
 import TaskStruct as T
     exposing
         ( Task(..)
@@ -33,9 +35,21 @@ type alias Model =
     }
 
 
-init : () -> ( Model, Cmd Msg )
-init _ =
-    ( { taskTree = createTask "begin"
+port cache : E.Value -> Cmd msg
+
+
+init : String -> ( Model, Cmd Msg )
+init t =
+    let
+        f =
+            case D.decodeString T.decode t of
+                Ok v ->
+                    v
+
+                Err e ->
+                    createTask "begin"
+    in
+    ( { taskTree = f
       , taskEditable = Nothing
       }
     , Cmd.none
@@ -51,6 +65,7 @@ type EditTask
     = Edit Task
     | Name String
     | Desk String
+    | Save
 
 
 type Msg
@@ -108,12 +123,16 @@ update msg model =
                     , Cmd.none
                     )
 
+        EditTask Save ->
+            ( model
+            , cache (T.encode model.taskTree)
+            )
+
 
 view : Model -> Html Msg
 view model =
     div [ class "main" ]
-        [ node "link" [ rel "stylesheet", href "main.css" ] []
-        , div [ class "task-tree" ] [ recViewTaskTree model.taskTree ]
+        [ div [ class "task-tree" ] [ recViewTaskTree model.taskTree ]
         , div [] [ viewTaskEditable model.taskEditable ]
         ]
 
@@ -142,6 +161,7 @@ viewTaskEditable t =
 
         Just (Task task) ->
             div [ class "editable" ]
-                [ input [ type_ "text", value task.name, onInput (\n -> EditTask (Name n)) ] []
+                [ button [ onClick (EditTask Save) ] [ text "save" ]
+                , input [ type_ "text", value task.name, onInput (\n -> EditTask (Name n)) ] []
                 , textarea [ onInput (\n -> EditTask (Desk n)), value task.desk ] [ text task.desk ]
                 ]
